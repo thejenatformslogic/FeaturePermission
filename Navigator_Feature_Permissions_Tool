@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navigator Feature Permissions Tool — Forms Logic</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --surface: #ffffff;
+    --surface2: #f8fafc;
+    --border: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --blue: #2563eb;
+    --green: #059669;
+    --navy: #1a2540;
+    --font: 'Outfit', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font); background: #f0f4f8; color: var(--text-primary);
+    font-size: 14px; line-height: 1.5; padding-bottom: 60px;
+  }
+
+  /* ── TOP BAR ── */
+  .app-topbar {
+    background: #0c1428; color: #f1f5f9; padding: 14px 28px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .app-topbar .brand { font-size: 15px; font-weight: 700; letter-spacing: 0.3px; }
+  .app-topbar .brand span { color: #3b82f6; }
+  .app-topbar .sub { font-size: 11px; color: #94a3b8; margin-left: auto; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 28px 0; }
+
+  .section-header { margin-bottom: 20px; }
+  .section-header h2 { font-size: 22px; font-weight: 700; color: var(--navy); }
+  .section-header p { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
+  /* ── GUIDE BANNER ── */
+  .fp-guide-banner {
+    background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+    padding: 16px 20px; margin-bottom: 20px; display: flex; gap: 20px; align-items: flex-start;
+  }
+  .fp-guide-banner .icon { font-size: 24px; flex-shrink: 0; }
+  .fp-guide-banner .title { font-size: 13px; font-weight: 700; color: #1e40af; margin-bottom: 4px; }
+  .fp-guide-banner .body { font-size: 12px; color: #3b4d6a; line-height: 1.6; }
+
+  /* ── ROLE REFERENCE CARDS ── */
+  .fp-role-cards {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 24px;
+  }
+  .fp-role-card {
+    background: white; border: 1px solid var(--border); border-radius: 8px; padding: 12px;
+  }
+  .fp-role-card .rc-name { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+  .fp-role-card .rc-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+
+  /* ── FEATURE PERMISSIONS TOOL (scoped) ── */
+  .fp-tool {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .fp-toolbar {
+    display: flex; gap: 12px; align-items: flex-end; padding: 16px 20px;
+    background: #1a2540; flex-wrap: wrap;
+  }
+  .fp-client-field { flex: 1; min-width: 220px; }
+  .fp-client-field label {
+    display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: rgba(255,255,255,0.6); margin-bottom: 5px; font-family: var(--font);
+  }
+  .fp-client-field input {
+    width: 100%; padding: 8px 12px; font-size: 13px; border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px; background: rgba(255,255,255,0.1); color: white; font-family: var(--font);
+    outline: none;
+  }
+  .fp-client-field input::placeholder { color: rgba(255,255,255,0.4); }
+  .fp-client-field input:focus { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.15); }
+  .fp-btn {
+    padding: 8px 16px; font-size: 12px; border-radius: 6px; cursor: pointer;
+    font-family: var(--font); font-weight: 600; white-space: nowrap; transition: all 0.15s;
+  }
+  .fp-btn-secondary { border: 1px solid rgba(255,255,255,0.3); background: transparent; color: rgba(255,255,255,0.75); }
+  .fp-btn-secondary:hover { background: rgba(255,255,255,0.1); color: white; }
+  .fp-btn-primary { border: none; background: white; color: #1a2540; }
+  .fp-btn-primary:hover { background: #e8edf5; }
+  .fp-btn-primary.fp-success { background: #059669; color: white; }
+  .fp-tabs {
+    display: flex; gap: 2px; border-bottom: 2px solid var(--border); overflow-x: auto;
+    background: var(--surface2); padding: 0 20px;
+  }
+  .fp-tab {
+    padding: 10px 16px; font-size: 12px; border: none; border-bottom: 2px solid transparent;
+    margin-bottom: -2px; background: transparent; color: var(--text-muted); cursor: pointer;
+    font-family: var(--font); font-weight: 500; border-radius: 4px 4px 0 0; white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .fp-tab.fp-active { background: white; color: #1a2540; font-weight: 700; border-bottom-color: #1a2540; }
+  .fp-tab .fp-badge {
+    margin-left: 6px; font-size: 10px; background: var(--text-muted); color: white;
+    border-radius: 10px; padding: 1px 6px;
+  }
+  .fp-tab.fp-active .fp-badge { background: #1a2540; }
+  .fp-role-summary {
+    margin: 0; padding: 12px 20px; background: #f1f4f9;
+    font-size: 12px; color: var(--text-secondary); font-family: var(--font);
+    border-bottom: 1px solid var(--border);
+  }
+  .fp-section-label {
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700;
+    margin: 16px 0 8px; padding: 0 20px; font-family: var(--font);
+  }
+  .fp-section-label.fp-enabled { color: #1a2540; }
+  .fp-section-label.fp-disabled { color: var(--text-muted); }
+  .fp-perm-list { display: flex; flex-direction: column; gap: 2px; padding: 0 20px 8px; }
+  .fp-perm-row {
+    display: flex; align-items: flex-start; gap: 14px; padding: 10px 14px;
+    border-radius: 6px; border: 1px solid var(--border); background: white; transition: all 0.15s;
+  }
+  .fp-perm-row.fp-on { background: #f0f4ff; border-color: #c7d4f0; }
+  .fp-toggle-wrap { flex-shrink: 0; padding-top: 2px; }
+  .fp-toggle {
+    width: 40px; height: 22px; border-radius: 11px; border: none; cursor: pointer;
+    position: relative; transition: background 0.2s; background: #d1d5db;
+  }
+  .fp-toggle.fp-on { background: #1a2540; }
+  .fp-toggle-knob {
+    position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+    border-radius: 50%; background: white; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .fp-toggle.fp-on .fp-toggle-knob { left: 21px; }
+  .fp-perm-info { flex: 1; }
+  .fp-perm-name-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 2px; }
+  .fp-perm-name { font-size: 13px; font-weight: 600; color: var(--text-primary); font-family: var(--font); }
+  .fp-badge-tag {
+    font-size: 9px; letter-spacing: 1px; text-transform: uppercase; background: #fff3cd;
+    color: #856404; padding: 1px 6px; border-radius: 10px; border: 1px solid #ffc107;
+  }
+  .fp-perm-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.5; font-family: var(--font); }
+
+  .fp-footer-note {
+    max-width: 1080px; margin: 24px auto 0; padding: 0 28px;
+    font-size: 11px; color: var(--text-muted); text-align: center;
+  }
+
+  @media (max-width: 860px) {
+    .fp-role-cards { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+  <div class="app-topbar">
+    <div class="brand">Forms<span>Logic</span> · Navigator</div>
+    <div class="sub">Feature Permissions Tool</div>
+  </div>
+
+  <div class="wrap">
+    <div class="section-header">
+      <h2>Feature Permissions Tool</h2>
+      <p>Configure Navigator role permissions for your firm, then export a reference spreadsheet for your team</p>
+    </div>
+
+    <!-- Guide banner -->
+    <div class="fp-guide-banner">
+      <div class="icon">📖</div>
+      <div>
+        <div class="title">How to use this tool</div>
+        <div class="body">
+          Navigator organizes users into <strong>5 roles</strong>: Site Manager, Site Admin, Admin Advisor, Advisor, and Assistant.
+          Permissions are configured at the role level — all users in a role share the same defaults.
+          Use the tabs below to configure each role, then <strong>Export to Excel</strong> to generate your reference spreadsheet.
+          For full detail on each permission, open the <strong>User Guide</strong> button in the toolbar.
+        </div>
+      </div>
+    </div>
+
+    <!-- Role reference cards -->
+    <div class="fp-role-cards">
+      <div class="fp-role-card" style="border-top:3px solid #1a5c5c">
+        <div class="rc-name" style="color:#1a5c5c">Site Manager</div>
+        <div class="rc-desc">Highest-level role. Full admin, reports, product subscriptions. Compliance officers, ops managers.</div>
+      </div>
+      <div class="fp-role-card" style="border-top:3px solid #2563eb">
+        <div class="rc-name" style="color:#2563eb">Site Admin</div>
+        <div class="rc-desc">Broad operational access. Manage workflows, run reports, audit trails. Senior ops staff.</div>
+      </div>
+      <div class="fp-role-card" style="border-top:3px solid #7c3aed">
+        <div class="rc-name" style="color:#7c3aed">Admin Advisor</div>
+        <div class="rc-desc">Hybrid advisor + admin. Submit workflows, run reports, NIGO. Senior advisors with supervisory duties.</div>
+      </div>
+      <div class="fp-role-card" style="border-top:3px solid #d97706">
+        <div class="rc-name" style="color:#d97706">Advisor</div>
+        <div class="rc-desc">Standard advisor role. Submit workflows, manage own visibility. Additional permissions can be granted.</div>
+      </div>
+      <div class="fp-role-card" style="border-top:3px solid #64748b">
+        <div class="rc-name" style="color:#64748b">Assistant</div>
+        <div class="rc-desc">Limited defaults. Can be granted Admin Lite to support Advisors with their workflows.</div>
+      </div>
+    </div>
+
+    <!-- THE TOOL -->
+    <div class="fp-tool">
+      <div class="fp-toolbar">
+        <div class="fp-client-field">
+          <label for="fp-clientName">Client Name</label>
+          <input type="text" id="fp-clientName" placeholder="Enter client name...">
+        </div>
+        <button class="fp-btn fp-btn-secondary" onclick="fpOpenGuide()">📖 User Guide</button>
+        <button class="fp-btn fp-btn-secondary" onclick="fpResetToDefaults()">↺ Reset to Defaults</button>
+        <button class="fp-btn fp-btn-primary" id="fp-exportBtn" onclick="fpExportToExcel()">↓ Export to Excel</button>
+      </div>
+      <div class="fp-tabs" id="fp-tabs"></div>
+      <div class="fp-role-summary" id="fp-roleSummary"></div>
+      <div id="fp-permList"></div>
+    </div>
+  </div>
+
+  <div class="fp-footer-note">
+    Forms Logic · Navigator Feature Permissions · Standalone Tool
+  </div>
+
+<script>
+// ============================================================
+//  NAVIGATOR FEATURE PERMISSIONS — STANDALONE TOOL
+//  Extracted from onboarding-portal-v82.html. Self-contained.
+// ============================================================
+
+const FP_ROLES = ["Site Manager", "Site Admin", "Admin Advisor", "Advisor", "Assistant"];
+
+const FP_PERMISSIONS = [
+  { name: "Can 'submit' workflow", description: "Submit button is available in Edit Workflow tab to submit WFs forward.", defaults: { "Site Manager": true, "Site Admin": false, "Admin Advisor": true, "Advisor": true, "Assistant": false } },
+  { name: "Can create workflows", description: "Create workflow/template button is available.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Has Admin Lite Privileges", description: "Permission to edit other users profiles.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can skip 'For Signature' approval", description: "This skips initial review.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can not Reject/Archive workflow", description: "Will not allow workflow to be rejected or archived by user.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can view NIGO Blotter", description: "Access to NIGO Blotter in Blotters Section of toolbar.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can view Check Blotter", description: "Access to Check Blotter in Blotters Section of toolbar.", defaults: { "Site Manager": true, "Site Admin": true, "Admin Advisor": true, "Advisor": false, "Assistant": false } },
+  { name: "Use Workflow Lite Version", description: "Removes options from left hand menu panel.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false }, note: "Requires setup" },
+  { name: "Default To Data View", description: "When user opens Workflow tab, the default view is NOT the PDFs but the Data view.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can Set 'Can View My Work' Users", description: "Allows user to set 'Can View My Work' users.", defaults: { "Site Manager": true, "Site Admin": true, "Admin Advisor": true, "Advisor": true, "Assistant": true } },
+  { name: "Can Set 'Can Edit My Profile' Users", description: "Allows user to set 'Can Edit My Profile' users.", defaults: { "Site Manager": true, "Site Admin": true, "Admin Advisor": true, "Advisor": true, "Assistant": true } },
+  { name: "Remain in workflow upon submit", description: "After clicking Submit, the user stays in the current workflow instead of being returned to the Dashboard.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can view workflow history tab", description: "Provides access to an in-depth report of all changes made to a workflow.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can approve workflows - Global Override - Any Approval Level", description: "Allows this user to approve workflows at any level regardless of their assigned level.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can manage product subscriptions", description: "Provides access to Vendor Product Subscriptions in Navigator and the ability to activate or deactivate forms.", defaults: { "Site Manager": true, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can NIGO workflows", description: "Allows this user to mark workflows as NIGO (Not In Good Order).", defaults: { "Site Manager": true, "Site Admin": true, "Admin Advisor": true, "Advisor": false, "Assistant": false } },
+  { name: "Can Restart workflows", description: "Allows this user to restart workflows.", defaults: { "Site Manager": true, "Site Admin": true, "Admin Advisor": true, "Advisor": false, "Assistant": false } },
+  { name: "Can run back office reports", description: "Allows this user to run back office reports in Navigator.", defaults: { "Site Manager": true, "Site Admin": true, "Admin Advisor": true, "Advisor": false, "Assistant": false } },
+  { name: "Can Run Principal Review Report", description: "Allows user to view all the workflows that are in a Approval or Principal Review state.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can view audit trail", description: "Allows this user to view the full audit trail of workflow activity.", defaults: { "Site Manager": true, "Site Admin": true, "Admin Advisor": true, "Advisor": false, "Assistant": false } },
+  { name: "Can assign workflows", description: "Allows this user to assign workflows to other users.", defaults: { "Site Manager": true, "Site Admin": true, "Admin Advisor": true, "Advisor": false, "Assistant": false } },
+  { name: "Can stamp documents", description: "Allows this user to stamp documents within a workflow.", defaults: { "Site Manager": true, "Site Admin": true, "Admin Advisor": true, "Advisor": false, "Assistant": false } },
+  { name: "Can create personal bundled workflows", description: "Allows this user to create pre-configured workflow templates for their own personal use.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can create authorized bundled workflows", description: "Allows this user to create pre-configured workflow templates for organizational use.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can view all organizational clients", description: "Allows this user to create workflows for any client across all organization levels.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can download form prompts spreadsheet", description: "Allows this user to download a spreadsheet containing form codes and prompts.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+  { name: "Can Edit Workflow Group", description: "Allows this user to switch between old and new workflow versions within Navigator.", defaults: { "Site Manager": false, "Site Admin": false, "Admin Advisor": false, "Advisor": false, "Assistant": false } },
+];
+
+let fpActiveRole = "Site Manager";
+let fpState = fpInitState();
+
+function fpInitState() {
+  const s = {};
+  FP_ROLES.forEach(role => {
+    s[role] = {};
+    FP_PERMISSIONS.forEach(p => { s[role][p.name] = p.defaults[role]; });
+  });
+  return s;
+}
+
+function fpOnCount(role) {
+  return Object.values(fpState[role]).filter(Boolean).length;
+}
+
+function fpRenderTabs() {
+  document.getElementById("fp-tabs").innerHTML = FP_ROLES.map(role => `
+    <button class="fp-tab ${role === fpActiveRole ? 'fp-active' : ''}" onclick="fpSetRole('${role}')">
+      ${role} <span class="fp-badge">${fpOnCount(role)}</span>
+    </button>
+  `).join("");
+}
+
+function fpRenderSummary() {
+  document.getElementById("fp-roleSummary").innerHTML =
+    `<strong>${fpActiveRole}</strong> — ${fpOnCount(fpActiveRole)} of ${FP_PERMISSIONS.length} permissions enabled. Toggle permissions below to customize for this client.`;
+}
+
+function fpRenderPerms() {
+  const on = FP_PERMISSIONS.filter(p => fpState[fpActiveRole][p.name]);
+  const off = FP_PERMISSIONS.filter(p => !fpState[fpActiveRole][p.name]);
+  let html = "";
+  if (on.length > 0) {
+    html += `<div class="fp-section-label fp-enabled">● Enabled (${on.length})</div><div class="fp-perm-list">`;
+    on.forEach(p => { html += fpPermRow(p, true); });
+    html += `</div>`;
+  }
+  if (off.length > 0) {
+    html += `<div class="fp-section-label fp-disabled">○ Disabled (${off.length})</div><div class="fp-perm-list">`;
+    off.forEach(p => { html += fpPermRow(p, false); });
+    html += `</div>`;
+  }
+  const container = document.getElementById("fp-permList");
+  container.innerHTML = html;
+  if (container._fpClickHandler) {
+    container.removeEventListener('click', container._fpClickHandler);
+  }
+  container._fpClickHandler = function(e) {
+    const btn = e.target.closest('.fp-toggle');
+    if (btn && btn.dataset.perm) {
+      fpToggle(btn.dataset.perm);
+    }
+  };
+  container.addEventListener('click', container._fpClickHandler);
+}
+
+function fpPermRow(p, value) {
+  const safeId = p.name.replace(/[^a-z0-9]/gi, "_");
+  return `
+    <div class="fp-perm-row ${value ? 'fp-on' : ''}" id="fp-row_${safeId}">
+      <div class="fp-toggle-wrap">
+        <button class="fp-toggle ${value ? 'fp-on' : ''}" data-perm="${p.name}">
+          <span class="fp-toggle-knob"></span>
+        </button>
+      </div>
+      <div class="fp-perm-info">
+        <div class="fp-perm-name-row">
+          <span class="fp-perm-name">${p.name}</span>
+          ${p.note ? `<span class="fp-badge-tag">${p.note}</span>` : ""}
+        </div>
+        <div class="fp-perm-desc">${p.description}</div>
+      </div>
+    </div>
+  `;
+}
+
+function fpToggle(permName) {
+  fpState[fpActiveRole][permName] = !fpState[fpActiveRole][permName];
+  fpRender();
+}
+
+function fpSetRole(role) {
+  fpActiveRole = role;
+  fpRender();
+}
+
+function fpRender() {
+  fpRenderTabs();
+  fpRenderSummary();
+  fpRenderPerms();
+}
+
+function fpResetToDefaults() {
+  fpState = fpInitState();
+  fpRender();
+}
+
+function fpExportToExcel() {
+  if (typeof XLSX === 'undefined') { alert('Export library still loading — please try again in a moment.'); return; }
+  const nameEl = document.getElementById("fp-clientName");
+  const clientName = nameEl ? nameEl.value.trim() : "";
+  const wb = XLSX.utils.book_new();
+  const summaryData = [
+    ["Navigator Feature Permissions Configuration"],
+    ["Client:", clientName || "(not specified)"],
+    ["Generated:", new Date().toLocaleDateString()],
+    [""],
+    ["Permission", "Description", ...FP_ROLES],
+    ...FP_PERMISSIONS.map(p => [p.name, p.description, ...FP_ROLES.map(r => fpState[r][p.name] ? "ON" : "OFF")]),
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(summaryData);
+  ws["!cols"] = [{ wch: 50 }, { wch: 60 }, ...FP_ROLES.map(() => ({ wch: 14 }))];
+  XLSX.utils.book_append_sheet(wb, ws, "All Roles");
+  FP_ROLES.forEach(role => {
+    const roleData = [
+      [role + " - Feature Permissions"],
+      ["Client:", clientName || "(not specified)"],
+      [""],
+      ["Permission", "Description", "Status"],
+      ...FP_PERMISSIONS.map(p => [p.name, p.description, fpState[role][p.name] ? "ON" : "OFF"]),
+    ];
+    const rws = XLSX.utils.aoa_to_sheet(roleData);
+    rws["!cols"] = [{ wch: 50 }, { wch: 60 }, { wch: 10 }];
+    XLSX.utils.book_append_sheet(wb, rws, role);
+  });
+  const filename = (clientName ? clientName.replace(/\s+/g, "_") + "_" : "") + "Navigator_Feature_Permissions.xlsx";
+  XLSX.writeFile(wb, filename);
+  const btn = document.getElementById("fp-exportBtn");
+  btn.textContent = "✓ Exported!"; btn.classList.add("fp-success");
+  setTimeout(() => { btn.textContent = "↓ Export to Excel"; btn.classList.remove("fp-success"); }, 3000);
+}
+
+// ── USER GUIDE (FL style, auto-generated reference table — no drift) ──
+function fpOpenGuide() {
+  const nl = "\n";
+  const today = new Date().toLocaleDateString();
+  const roleHdr = FP_ROLES.map(r => `<th>${r}</th>`).join("");
+  const permRows = FP_PERMISSIONS.map(p => {
+    const cells = FP_ROLES.map(r => p.defaults[r]
+      ? '<td class="on">ON</td>'
+      : '<td class="off">—</td>').join("");
+    const note = p.note ? ` <span class="note">(${p.note})</span>` : "";
+    return `<tr><td class="pname">${p.name}${note}</td><td>${p.description}</td>${cells}</tr>`;
+  }).join(nl);
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Navigator Feature Permissions — User Guide</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;max-width:900px;margin:0 auto;padding:40px 32px;color:#000;line-height:1.6}
+  h1{font-size:24px;color:#1F3864;margin-bottom:2px}
+  h1.sub{font-size:16px;font-weight:normal;color:#1F3864;margin-top:0;margin-bottom:6px}
+  h2{font-size:17px;color:#1F3864;margin-top:34px;margin-bottom:8px;border-bottom:2px solid #1F3864;padding-bottom:5px}
+  .eyebrow{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#1F3864;margin-bottom:8px;font-weight:bold}
+  .meta{font-size:12px;color:#555;margin-bottom:28px}
+  p{font-size:13px;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:12px}
+  th{background:#1F3864;color:white;padding:8px 10px;text-align:left;font-size:11px}
+  td{padding:7px 10px;border-bottom:1px solid #d9d9d9;vertical-align:top}
+  tr:nth-child(even) td{background:#f2f5fa}
+  td.on{color:#059669;font-weight:700;text-align:center}
+  td.off{color:#bbb;text-align:center}
+  td.pname{font-weight:600;width:230px}
+  .note{font-size:10px;color:#856404;font-weight:600}
+  ol{margin:8px 0 8px 20px} li{margin-bottom:8px;font-size:13px}
+  .tip{background:#eef3fb;border-left:3px solid #1F3864;padding:10px 14px;margin:14px 0;font-size:13px}
+  .warn{background:#fff3cd;border-left:3px solid #ffc107;padding:10px 14px;margin:14px 0;font-size:13px}
+  .foot{margin-top:32px;font-size:11px;color:#888;border-top:1px solid #d9d9d9;padding-top:12px}
+  #printBtn{position:fixed;top:16px;right:16px;background:#1F3864;color:white;border:none;padding:10px 18px;
+    border-radius:6px;font-family:Arial,sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+  @media print{#printBtn{display:none}}
+</style></head><body>
+<button id="printBtn" onclick="window.print()">🖨 Print</button>
+<div class="eyebrow">Navigator — Forms Logic</div>
+<h1>Feature Permissions</h1>
+<h1 class="sub">User Guide</h1>
+<div class="meta">For Site Managers &amp; Forms Logic Staff &nbsp;|&nbsp; Prepared by Forms Logic &nbsp;|&nbsp; ${today}</div>
+
+<h2>1. Overview</h2>
+<p>Navigator is Forms Logic's workflow automation platform for broker-dealers and RIAs. Feature Permissions control exactly what each user can see and do within Navigator — from submitting workflows to running reports to managing product subscriptions.</p>
+<p>This guide covers: (1) how to use the Feature Permissions Tool, and (2) what each permission does so you can make informed decisions for each role.</p>
+
+<h2>2. User Roles in Navigator</h2>
+<p>Navigator organizes users into five roles. Permissions are configured at the role level — all users assigned to a role share the same default permissions.</p>
+<table>
+<tr><th>Role</th><th>Description &amp; Typical Responsibilities</th></tr>
+<tr><td class="pname">Site Manager</td><td>Highest-level client role. Oversees entire setup including user permissions, reports, product subscriptions, and workflow configuration. Typically compliance officers or operations managers.</td></tr>
+<tr><td class="pname">Site Admin</td><td>Broad operational access. Manages workflows, runs reports, views audit trails. Does not manage product subscriptions or billing. Typically senior operations staff.</td></tr>
+<tr><td class="pname">Admin Advisor</td><td>Hybrid role combining advisor responsibilities with admin capabilities. Can submit/manage workflows, run back-office reports, NIGO workflows, and assign work. Senior advisors with supervisory duties.</td></tr>
+<tr><td class="pname">Advisor</td><td>Standard advisor role. Can submit workflows and manage own work visibility and profile access. Additional permissions can be granted as needed.</td></tr>
+<tr><td class="pname">Assistant</td><td>Support role with limited defaults. Can manage work visibility and profile access. Admin Lite Privileges can be granted to support Advisors.</td></tr>
+</table>
+
+<h2>3. How to Use the Tool</h2>
+<ol>
+<li><strong>Open the Tool</strong> — Open this Feature Permissions tool (the standalone HTML file) in your web browser.</li>
+<li><strong>Enter the Client Name</strong> — Type the firm name in the Client Name field. This appears in the exported spreadsheet header and filename.</li>
+<li><strong>Select a Role Tab</strong> — Click each role tab (Site Manager, Site Admin, Admin Advisor, Advisor, Assistant). Each tab shows the number of permissions currently enabled.</li>
+<li><strong>Review &amp; Adjust Permissions</strong> — Each permission is displayed with a toggle and a plain-English description. Defaults are pre-loaded. Toggle ON or OFF as needed.</li>
+<li><strong>Repeat for Each Role</strong> — Work through all five role tabs. Changes to one role do not affect others.</li>
+<li><strong>Export to Excel</strong> — Click Export to Excel. A spreadsheet downloads with an "All Roles" summary tab and one tab per role.</li>
+<li><strong>Use as Reference</strong> — The spreadsheet becomes your permission reference document for adding new users in Navigator.</li>
+</ol>
+<div class="tip"><strong>Tip:</strong> Click "Reset to Defaults" at any time to restore all permissions to the standard Forms Logic starting configuration.</div>
+
+<h2>4. Feature Permissions Reference</h2>
+<div class="warn"><strong>Note:</strong> Default settings are a starting point. Your firm may enable or disable any permission for any role based on your specific workflows and compliance requirements. The ON markers below reflect the default configuration.</div>
+<table>
+<tr><th>Permission</th><th>What It Does</th>${roleHdr}</tr>
+${permRows}
+</table>
+
+<div class="foot">Forms Logic · Navigator Feature Permissions User Guide · ${today}</div>
+</body></html>`;
+
+  const w = window.open("", "_blank");
+  if (w) {
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  } else {
+    // popup blocked — fall back to download
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Navigator_Feature_Permissions_User_Guide.html";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+}
+
+fpRender();
+</script>
+</body>
+</html>
